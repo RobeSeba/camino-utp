@@ -1,0 +1,179 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   Tokens de diseno (Camino UTP)
+   El tema y la accesibilidad se controlan con atributos en <html>:
+   data-theme="light" | "dark"
+   data-contrast="normal" | "high"
+   data-motion="full" | "reduced"
+   --font-scale lo define AccessibilityContext (0.875 - 1.25)
+   ============================================================ */
+
+:root {
+  --font-scale: 1;
+
+  --c-canvas: #f4f5f7;
+  --c-surface: #ffffff;
+  --c-elevated: #ffffff;
+  --c-line: #e3e6ec;
+  --c-ink: #101828;
+  --c-muted: #667085;
+
+  --c-brand: #cf0a1e;
+  --c-brand-dark: #a50817;
+  --c-brand-soft: #fdecee;
+  --c-brand-ink: #8a0613;
+  --c-brand-ring: rgba(207, 10, 30, 0.18);
+  --c-focus: rgba(207, 10, 30, 0.28);
+
+  --c-success: #067647;
+  --c-success-soft: #ecfdf3;
+  --c-warning: #b54708;
+  --c-warning-soft: #fffaeb;
+  --c-danger: #b42318;
+  --c-danger-soft: #fef3f2;
+  --c-info: #175cd3;
+  --c-info-soft: #eff8ff;
+}
+
+[data-theme='dark'] {
+  --c-canvas: #0b0d12;
+  --c-surface: #14171f;
+  --c-elevated: #1b1f29;
+  --c-line: #2b3140;
+  --c-ink: #eceef3;
+  --c-muted: #98a2b3;
+
+  --c-brand: #e11d2e;
+  --c-brand-dark: #f43f4f;
+  --c-brand-soft: #2c1418;
+  --c-brand-ink: #ffb4bb;
+  --c-brand-ring: rgba(244, 63, 79, 0.26);
+  --c-focus: rgba(244, 63, 79, 0.4);
+
+  --c-success: #75e0a7;
+  --c-success-soft: #0e2a1e;
+  --c-warning: #fec84b;
+  --c-warning-soft: #2a2110;
+  --c-danger: #fda29b;
+  --c-danger-soft: #2a1514;
+  --c-info: #84caff;
+  --c-info-soft: #10233c;
+}
+
+[data-contrast='high'] {
+  --c-canvas: #ffffff;
+  --c-surface: #ffffff;
+  --c-elevated: #ffffff;
+  --c-line: #111111;
+  --c-ink: #000000;
+  --c-muted: #1f2937;
+
+  --c-brand: #a8000c;
+  --c-brand-dark: #7a0009;
+  --c-brand-soft: #ffe8ea;
+  --c-brand-ink: #640005;
+  --c-brand-ring: rgba(168, 0, 12, 0.3);
+  --c-focus: #a8000c;
+
+  --c-success: #005c34;
+  --c-success-soft: #e6f6ee;
+  --c-warning: #7a3200;
+  --c-warning-soft: #fff4e0;
+  --c-danger: #8a1410;
+  --c-danger-soft: #ffe9e7;
+  --c-info: #0b3f99;
+  --c-info-soft: #e8f1ff;
+}
+
+[data-theme='dark'][data-contrast='high'] {
+  --c-canvas: #000000;
+  --c-surface: #0a0a0a;
+  --c-elevated: #141414;
+  --c-line: #ffffff;
+  --c-ink: #ffffff;
+  --c-muted: #e5e7eb;
+
+  --c-brand: #ff5a6a;
+  --c-brand-dark: #ff8391;
+  --c-brand-soft: #2b0004;
+  --c-brand-ink: #ffc2c8;
+  --c-brand-ring: rgba(255, 90, 106, 0.3);
+  --c-focus: #ff8391;
+
+  --c-success: #8cf0bc;
+  --c-success-soft: #052418;
+  --c-warning: #ffd166;
+  --c-warning-soft: #241a05;
+  --c-danger: #ffb3ad;
+  --c-danger-soft: #2b0b09;
+  --c-info: #a5d8ff;
+  --c-info-soft: #071a2e;
+}
+
+@layer base {
+  html {
+    font-size: calc(16px * var(--font-scale));
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-canvas font-sans text-ink antialiased;
+    min-height: 100dvh;
+  }
+
+  /* Foco visible siempre, tambien con teclado */
+  :focus-visible {
+    outline: 2px solid var(--c-brand);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background: var(--c-brand);
+    color: #ffffff;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-semibold tracking-tight text-ink;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl border border-line bg-surface shadow-card;
+  }
+
+  .card-interactive {
+    @apply card transition duration-200 hover:-translate-y-0.5 hover:shadow-float;
+  }
+
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Respeta la preferencia de menos movimiento */
+[data-motion='reduced'] *,
+[data-motion='reduced'] *::before,
+[data-motion='reduced'] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}

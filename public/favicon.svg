@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Camino UTP">
+  <rect width="64" height="64" rx="16" fill="#cf0a1e" />
+  <path d="M31.9 13.5 47.5 47.2a2.2 2.2 0 0 1-2.9 2.9l-11-5.2-11 5.2a2.2 2.2 0 0 1-2.9-2.9L31.9 13.5Z" fill="#ffffff" />
+  <path d="M31.9 22.5v15.4l-10.3 4.9 10.3-20.3Z" fill="#f7c9ce" />
+</svg>
