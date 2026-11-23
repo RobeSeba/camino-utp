@@ -207,36 +207,6 @@ export function LoginPage() {
           >
             Ingresar con huella digital
           </Button>
-
-          <div className="mt-8 rounded-xl border border-dashed border-line bg-canvas p-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted">
-              Acceso de demostración
-            </p>
-            <p className="mt-1 text-xs text-muted">
-              Inicia con una cuenta habilitada en el entorno de pruebas. Si las cuentas de demostración no existen, usa tus credenciales institucionales.
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="border border-line"
-                disabled={loading}
-                onClick={() => void handleDemo('student')}
-              >
-                Entrar como estudiante
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="border border-line"
-                disabled={loading}
-                onClick={() => void handleDemo('staff')}
-              >
-                Entrar como SAE
-              </Button>
-            </div>
-          </div>
-
           <p className="mt-8 text-center text-xs text-muted">
             ¿Problemas para acceder? Escríbenos a{' '}
             <a href="mailto:sae.limasur@utp.edu.pe" className="font-semibold text-brand hover:underline">
