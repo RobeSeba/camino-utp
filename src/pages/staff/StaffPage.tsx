@@ -284,6 +284,9 @@ export function StaffPage() {
                             <Badge tone={status.tone} withDot>
                               {status.label}
                             </Badge>
+                            {ticket.studentDeletedAt && (
+                              <Badge tone="neutral">Retirado por estudiante</Badge>
+                            )}
                           </div>
                           <p className="mt-1.5 line-clamp-2 text-sm font-medium text-ink">
                             {ticket.subject}
@@ -356,6 +359,12 @@ export function StaffPage() {
                     <p className="whitespace-pre-line rounded-xl bg-canvas p-3 text-sm leading-relaxed text-muted">
                       {selected.description}
                     </p>
+
+                    {selected.studentDeletedAt && (
+                      <div className="rounded-xl border border-warning/30 bg-warning-soft p-3 text-sm text-warning">
+                        El estudiante retiró este ticket de su lista el {formatDateTime(selected.studentDeletedAt)}. El registro y su historial se conservan para el SAE.
+                      </div>
+                    )}
 
                     <div className="grid gap-3 sm:grid-cols-2">
                       <Select

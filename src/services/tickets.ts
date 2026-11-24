@@ -50,6 +50,7 @@ interface TicketRow {
   updated_at: string;
   estimated_hours: number;
   attachment_path: string | null;
+  student_deleted_at?: string | null;
   student_id?: string;
   classrooms?: ClassroomRef | ClassroomRef[] | null;
   ticket_messages?: MessageRow[] | null;
@@ -107,18 +108,19 @@ function mapTicket(row: TicketRow): Ticket & { studentName?: string } {
     messages,
     events,
     attachmentName: attachmentNameFromPath(row.attachment_path),
+    studentDeletedAt: row.student_deleted_at ?? null,
     studentName: profile?.full_name,
   };
 }
 
 const TICKET_LIST_SELECT =
-  'id, code, subject, description, category_id, classroom_id, location_note, status, priority, created_at, updated_at, estimated_hours, attachment_path, classrooms(code)';
+  'id, code, subject, description, category_id, classroom_id, location_note, status, priority, created_at, updated_at, estimated_hours, attachment_path, student_deleted_at, classrooms(code)';
 const TICKET_DETAIL_SELECT =
-  'id, code, student_id, subject, description, category_id, classroom_id, location_note, status, priority, created_at, updated_at, estimated_hours, attachment_path, classrooms(code), ticket_messages(id, author_role, author_name, body, created_at), ticket_events(id, label, created_at)';
+  'id, code, student_id, subject, description, category_id, classroom_id, location_note, status, priority, created_at, updated_at, estimated_hours, attachment_path, student_deleted_at, classrooms(code), ticket_messages(id, author_role, author_name, body, created_at), ticket_events(id, label, created_at)';
 const STAFF_TICKET_LIST_SELECT =
-  'id, code, student_id, subject, description, category_id, classroom_id, location_note, status, priority, created_at, updated_at, estimated_hours, attachment_path, classrooms(code), profiles:student_id(full_name)';
+  'id, code, student_id, subject, description, category_id, classroom_id, location_note, status, priority, created_at, updated_at, estimated_hours, attachment_path, student_deleted_at, classrooms(code), profiles:student_id(full_name)';
 const STAFF_TICKET_DETAIL_SELECT =
-  'id, code, student_id, subject, description, category_id, classroom_id, location_note, status, priority, created_at, updated_at, estimated_hours, attachment_path, classrooms(code), profiles:student_id(full_name), ticket_messages(id, author_role, author_name, body, created_at), ticket_events(id, label, created_at)';
+  'id, code, student_id, subject, description, category_id, classroom_id, location_note, status, priority, created_at, updated_at, estimated_hours, attachment_path, student_deleted_at, classrooms(code), profiles:student_id(full_name), ticket_messages(id, author_role, author_name, body, created_at), ticket_events(id, label, created_at)';
 
 export type TicketWithStudent = Ticket & { studentName?: string };
 
@@ -126,6 +128,7 @@ export async function fetchMyTickets(): Promise<Ticket[]> {
   const { data, error } = await supabase
     .from('tickets')
     .select(TICKET_LIST_SELECT)
+    .is('student_deleted_at', null)
     .order('updated_at', { ascending: false });
   if (error) throw error;
   return ((data ?? []) as unknown as TicketRow[]).map((row) => mapTicket(row));
@@ -197,6 +200,15 @@ export async function addTicketMessage(ticketId: string, body: string, authorRol
     author_name: 'Usuario', // El trigger lo reemplaza por el nombre real del perfil.
     body: body.trim(),
   });
+  if (error) throw error;
+}
+
+/**
+ * Retira un ticket de la lista del estudiante sin borrar el registro de auditoría.
+ * La autorización se valida en la función SECURITY DEFINER de Supabase.
+ */
+export async function deleteOwnTicket(ticketId: string): Promise<void> {
+  const { error } = await supabase.rpc('hide_own_ticket', { p_ticket_id: ticketId });
   if (error) throw error;
 }
 

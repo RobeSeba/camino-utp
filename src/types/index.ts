@@ -75,6 +75,8 @@ export interface Ticket {
   messages: TicketMessage[];
   events: TicketEvent[];
   attachmentName: string | null;
+  /** Fecha en que el estudiante retiró el ticket de su lista; el SAE conserva el registro. */
+  studentDeletedAt?: string | null;
   studentName?: string;
 }
 

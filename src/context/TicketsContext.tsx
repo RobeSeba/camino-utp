@@ -4,6 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import {
   addTicketMessage,
   createTicket as createTicketRecord,
+  deleteOwnTicket as deleteOwnTicketRecord,
   fetchMyTickets,
   fetchTicketByCode,
   updateTicketStatus,
@@ -20,6 +21,7 @@ interface TicketsContextValue {
   createTicket: (input: CreateTicketInput) => Promise<{ ok: boolean; id?: string; code?: string; error?: string }>;
   addMessage: (ticketId: string, body: string) => Promise<{ ok: boolean; error?: string }>;
   updateStatus: (ticketId: string, status: TicketStatus) => Promise<{ ok: boolean; error?: string }>;
+  deleteTicket: (ticketId: string) => Promise<{ ok: boolean; error?: string }>;
 }
 
 const TicketsContext = createContext<TicketsContextValue | null>(null);
@@ -27,6 +29,9 @@ const TicketsContext = createContext<TicketsContextValue | null>(null);
 function friendlyError(err: unknown): string {
   const msg = err instanceof Error ? err.message : String(err ?? '');
   const lower = msg.toLowerCase();
+  if (lower.includes('hide_own_ticket') || lower.includes('pgrst202')) {
+    return 'La función de eliminación aún no está instalada en Supabase. Aplica la nueva migración y vuelve a intentarlo.';
+  }
   if (lower.includes('row-level security') || lower.includes('permission') || lower.includes('42501') || lower.includes('not allowed')) {
     return 'No tienes permiso para realizar esta acción o el ticket ya no admite cambios.';
   }
@@ -115,6 +120,18 @@ export function TicketsProvider({ children }: { children: ReactNode }) {
     [refresh],
   );
 
+  const deleteTicket = useCallback(async (ticketId: string): Promise<{ ok: boolean; error?: string }> => {
+    try {
+      await deleteOwnTicketRecord(ticketId);
+      // La RPC confirma que el ticket ya no es visible para el estudiante.
+      setTickets((current) => current.filter((ticket) => ticket.id !== ticketId));
+      setError(null);
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: friendlyError(err) };
+    }
+  }, []);
+
   const value = useMemo<TicketsContextValue>(
     () => ({
       tickets,
@@ -125,8 +142,9 @@ export function TicketsProvider({ children }: { children: ReactNode }) {
       createTicket,
       addMessage,
       updateStatus,
+      deleteTicket,
     }),
-    [tickets, isLoading, error, refresh, getTicketDetail, createTicket, addMessage, updateStatus],
+    [tickets, isLoading, error, refresh, getTicketDetail, createTicket, addMessage, updateStatus, deleteTicket],
   );
 
   return <TicketsContext.Provider value={value}>{children}</TicketsContext.Provider>;
