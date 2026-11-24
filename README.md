@@ -3,9 +3,10 @@
 Aplicación web para estudiantes de la UTP: ubicación de aulas dentro del campus, centro de ayuda,
 reporte de incidencias con seguimiento y preferencias de accesibilidad.
 
-> **Estado actual: Etapa 2 — Frontend.**
-> La interfaz está construida y navegable, con datos simulados. **No hay backend, autenticación
-> real ni conexión a base de datos todavía.** Eso corresponde a la Etapa 3 (Supabase).
+> **Estado actual: Etapa 3 — Integración con Supabase.**
+> La aplicación utiliza Supabase Auth y servicios conectados a PostgreSQL, RLS y Storage para perfiles,
+> aulas, contenido de ayuda y tickets. Es necesario configurar las variables de entorno y aplicar
+> las migraciones antes de ejecutar la aplicación contra un proyecto Supabase.
 
 ---
 
@@ -19,7 +20,7 @@ reporte de incidencias con seguimiento y preferencias de accesibilidad.
 | Rutas | React Router 6 |
 | Iconos | Lucide React |
 | Estado | Context API (sesión, tickets, accesibilidad, notificaciones) |
-| Backend previsto | Supabase (Auth + PostgreSQL + RLS + Storage) |
+| Backend | Supabase (Auth + PostgreSQL + RLS + Storage) |
 
 ---
 
@@ -38,13 +39,19 @@ reporte de incidencias con seguimiento y preferencias de accesibilidad.
 ## Puesta en marcha
 
 ```bash
-# 1. Instalar dependencias
+# 1. Crear el archivo de entorno a partir del ejemplo
+cp .env.example .env
+# Completa VITE_SUPABASE_URL y VITE_SUPABASE_PUBLISHABLE_KEY en .env
+
+# 2. Instalar dependencias
 npm install
 
-# 2. Levantar el servidor de desarrollo
+# 3. Levantar el servidor de desarrollo
 npm run dev
 # → http://localhost:5173
 ```
+
+En Windows PowerShell, crea el archivo con `Copy-Item .env.example .env`.
 
 ### Scripts disponibles
 
@@ -93,7 +100,7 @@ Consulta [`docs/usuarios-prueba.md`](docs/usuarios-prueba.md) para aplicarla y v
 | `/app/ayuda` | Centro de ayuda |
 | `/app/ayuda/faq` | Preguntas frecuentes (buscador + acordeón) |
 | `/app/ayuda/canales` | Canales de atención del SAE |
-| `/app/tickets` | Listado de tickets con filtros |
+| `/app/tickets` | Listado de tickets con filtros y opción para retirarlos de la lista |
 | `/app/tickets/nuevo` | Formulario de incidencia (`?aula=A-201` precarga el aula) |
 | `/app/tickets/:code` | Detalle, historial y conversación del ticket |
 | `/app/accesibilidad` | Tamaño de texto, tema, contraste y movimiento |
@@ -113,8 +120,8 @@ camino-utp/
 │  │  ├─ CampusMap.tsx
 │  │  └─ ErrorBoundary.tsx
 │  ├─ context/            # Auth, Accessibility, Tickets, Toast
-│  ├─ data/mock.ts        # Datos temporales (aulas, FAQ, canales, tickets)
-│  ├─ lib/                # constants (rutas, estados), utils
+│  ├─ services/           # Consultas y operaciones de Supabase
+│  ├─ lib/                # Cliente Supabase, constantes y utilidades
 │  ├─ pages/
 │  │  ├─ auth/            # Login, biométrico, recuperación
 │  │  ├─ app/             # Inicio, aulas, perfil, ayuda, tickets, accesibilidad
@@ -123,6 +130,7 @@ camino-utp/
 │  ├─ App.tsx             # Definición de rutas
 │  ├─ main.tsx            # Providers + montaje
 │  └─ index.css           # Tokens de diseño y estilos base
+├─ supabase/migrations/  # Esquema, políticas RLS y datos iniciales
 ├─ .env.example
 ├─ tailwind.config.js
 └─ vite.config.ts
@@ -130,24 +138,32 @@ camino-utp/
 
 ### Separación de responsabilidades
 
-- **Páginas** componen pantallas; no contienen acceso a datos de red.
-- **Context** mantiene el estado de la sesión simulada, tickets y preferencias.
-- **`data/mock.ts`** es la única fuente de datos temporales. En la Etapa 3 se reemplaza por
-  `services/*.service.ts` que llamarán a Supabase.
-- **`types/`** define las entidades que luego mapearán las tablas de PostgreSQL.
+- **Páginas** componen pantallas y delegan las operaciones de datos en contextos y servicios.
+- **Context** mantiene el estado de autenticación, tickets, accesibilidad y notificaciones.
+- **`services/`** centraliza las consultas a Supabase Auth, PostgreSQL y Storage.
+- **`supabase/migrations/`** contiene el esquema, las políticas RLS, funciones y datos iniciales.
+- **`types/`** define las entidades TypeScript que representan los datos de la aplicación.
 
 ---
 
-## Datos y persistencia local (temporal)
+## Datos y persistencia
 
-| Clave | Almacenamiento | Contenido |
+| Información | Almacenamiento | Contenido |
 |---|---|---|
-| `camino-utp:session` | `sessionStorage` | Usuario simulado |
-| `camino-utp:tickets` | `localStorage` | Tickets creados y sus mensajes |
-| `camino-utp:a11y` | `localStorage` | Preferencias de accesibilidad |
+| Sesión | Supabase Auth | Sesión persistida por el cliente de Supabase (`camino-utp:auth`). |
+| Perfiles, aulas y contenido | PostgreSQL | Datos consultados mediante `src/services/`. |
+| Tickets, mensajes e historial | PostgreSQL | Persistencia real protegida por RLS. |
+| Adjuntos de tickets | Supabase Storage | Bucket privado `ticket-attachments`. |
+| Preferencias de accesibilidad | `localStorage` y Supabase | Copia local para respuesta inmediata y sincronización de preferencias del usuario. |
 
-Para reiniciar la demostración, borra esas claves desde DevTools → *Application → Storage*.
-Los tickets iniciales se vuelven a cargar desde `src/data/mock.ts`.
+Los tickets no se guardan en `localStorage`; se consultan y actualizan en Supabase.
+
+### Retiro de tickets
+
+El estudiante puede retirar un ticket desde el listado o desde su detalle. La operación es lógica:
+el ticket deja de aparecer en su lista, pero la fila, los mensajes, los adjuntos y la bitácora se
+conservan en Supabase para que el SAE mantenga el seguimiento y la auditoría. La autorización se
+valida en servidor mediante la función `hide_own_ticket()`.
 
 ---
 
@@ -178,18 +194,14 @@ Cuando estén disponibles los frames exportados, los ajustes se concentran en:
 
 ---
 
-## Qué falta antes de la Etapa 3
+## Pendientes antes de producción
 
-1. **Autenticación real** con Supabase Auth (reemplazar `AuthContext`).
-2. **Base de datos PostgreSQL** y migraciones versionadas (`supabase/migrations`).
-3. **Políticas RLS** por rol (estudiante, SAE, administrador) y validación en servidor.
-4. **Persistencia real** de perfil, tickets, mensajes y adjuntos (Storage).
-5. **Sustituir `src/data/mock.ts`** por servicios tipados.
-6. **Rutas protegidas** con sesión y rol verificados contra el backend.
-7. **Panel SAE** con asignación, notas internas y auditoría de estados.
-8. **Pruebas** de RLS, formularios y flujos completos.
-9. **Git**: `git init`, primer commit y publicación en GitHub (`camino-utp`).
-10. **Despliegue** estático con fallback SPA (Vercel / Netlify / Cloudflare Pages).
+1. Ejecutar y verificar todas las migraciones en el proyecto Supabase de destino.
+2. Probar las políticas RLS con cuentas de estudiante, SAE y administrador.
+3. Probar los flujos completos de tickets, incluidos mensajes, adjuntos, cambios de estado y retiro lógico.
+4. Configurar el despliegue con las variables de entorno y el fallback SPA.
+5. Activar e implementar WebAuthn/passkeys si se requiere autenticación biométrica real; la pantalla biométrica actual es demostrativa.
+6. Sustituir el mapa esquemático por coordenadas y rutas reales del campus cuando estén disponibles.
 
 ---
 

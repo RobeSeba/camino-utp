@@ -75,7 +75,7 @@ erDiagram
 | Tabla | Columnas principales | Restricciones |
 |---|---|---|
 | `ticket_categories` | `id`, `slug`, `name`, `description`, `sla_hours`, `is_active`, `sort_order` | `slug` único; SLA 1–720 h |
-| `tickets` | `id`, `code`, `student_id`, `category_id`, `classroom_id`, `location_note`, `subject`, `description`, `status`, `priority`, `assigned_to`, `estimated_hours`, `attachment_path`, hitos de fecha | `code` único generado en servidor |
+| `tickets` | `id`, `code`, `student_id`, `category_id`, `classroom_id`, `location_note`, `subject`, `description`, `status`, `priority`, `assigned_to`, `estimated_hours`, `attachment_path`, `student_deleted_at`, hitos de fecha | `code` único generado en servidor; retiro lógico opcional por el estudiante |
 | `ticket_messages` | `id`, `ticket_id`, `author_id`, `author_role`, `author_name`, `body`, `is_internal` | autor y nombre derivados del perfil |
 | `ticket_events` | `id`, `ticket_id`, `actor_id`, `event_type`, `label`, `is_internal`, `metadata jsonb` | solo escribe el servidor |
 | `help_articles` | `id`, `slug`, `title`, `excerpt`, `body text[]`, `category`, `is_popular`, `is_published`, `sort_order` | `slug` único |
@@ -106,7 +106,7 @@ erDiagram
 | Rol | Alcance |
 |---|---|
 | `anon` | Solo lectura de catálogos publicados: sedes, pabellones, aulas activas, rutas, categorías activas, FAQ publicadas, canales activos y avisos vigentes. |
-| `student` | Su perfil, sus preferencias de accesibilidad, sus tickets (crear y leer), mensajes de sus tickets (sin notas internas) y su historial. |
+| `student` | Su perfil, sus preferencias de accesibilidad, sus tickets visibles (crear, leer y retirar de su lista), mensajes de sus tickets (sin notas internas) y su historial. |
 | `staff` (SAE) | Todo lo de estudiante + lectura de todos los tickets/perfiles, cambio de estado, prioridad y asignación, notas internas, edición de FAQ y avisos. |
 | `admin` | Todo lo anterior + CRUD del catálogo del campus, categorías, canales y perfiles (incluido el rol). |
 
@@ -129,15 +129,15 @@ RLS está activo en las 13 tablas de `public`.
 | `support_channels` | activos: público; todos: admin | — | admin | admin |
 | `announcements` | publicados y vigentes: público; todos: admin | staff | staff | staff |
 | `profiles` | propio o staff | admin | propio (campos limitados) o admin | admin |
-| `tickets` | propios o staff | propio, solo `student` | staff | — (auditoría) |
+| `tickets` | propios no retirados o staff | propio, solo `student` | staff; el estudiante solo puede marcar su retiro mediante RPC | — (auditoría) |
 | `ticket_messages` | propios o staff; notas internas solo staff | propio o staff | — | — |
 | `ticket_events` | propios o staff; internos solo staff | — (solo triggers) | — | — |
 | `accessibility_preferences` | propio | propio | propio | propio |
 
 Notas de diseño:
 
-- **Sin `DELETE` en tickets ni mensajes**: se conservan como evidencia.
-- **Sin `UPDATE` de tickets para estudiantes**: las respuestas van por `ticket_messages`.
+- **Sin `DELETE` físico en tickets ni mensajes**: se conservan como evidencia. El estudiante puede retirarlos de su lista mediante `hide_own_ticket()`, que establece `student_deleted_at`; el SAE mantiene acceso al registro y al historial.
+- **Sin `UPDATE` directo de tickets para estudiantes**: las respuestas van por `ticket_messages`; el retiro se limita a la RPC validada en servidor.
 - Las funciones de rol son `SECURITY DEFINER` con `search_path = ''` para evitar recursión de
   políticas sobre `profiles`.
 - `ticket_events` no tiene política de escritura: solo lo alimentan triggers `SECURITY DEFINER`.
@@ -158,7 +158,8 @@ Notas de diseño:
 | `sync_ticket_status_timestamps()` | trigger `before update of status` | Mantiene `resolved_at` y `closed_at` coherentes. |
 | `guard_ticket_message()` | trigger `before insert on ticket_messages` | Deriva `author_id`/`author_name` del perfil, impide notas internas a estudiantes y bloquea respuestas a tickets cerrados. |
 | `on_ticket_message_created()` | trigger `after insert on ticket_messages` | Actualiza `updated_at` y registra la primera respuesta del SAE. |
-| `log_ticket_change()` | trigger `after insert/update on tickets` | Escribe la bitácora en `ticket_events`. |
+| `log_ticket_change()` | trigger `after insert/update on tickets` | Escribe la bitácora en `ticket_events`, incluido el retiro lógico por el estudiante. |
+| `hide_own_ticket()` | RPC `SECURITY DEFINER` | Permite que el estudiante retire únicamente sus propios tickets sin borrar evidencia. |
 | `ticket_status_label()` | helper | Etiqueta legible del estado para la bitácora. |
 
 ---
@@ -224,6 +225,7 @@ No se crean usuarios ni tickets de prueba.
 | 7 | `20261118090600_storage_attachments.sql` | Bucket privado y políticas de Storage. |
 | 8 | `20261118090700_privileges.sql` | `GRANT`/`REVOKE` explícitos por rol. |
 | 9 | `20261118090800_reference_data.sql` | Catálogo y contenido inicial. |
+| 10 | `20261124170000_ticket_student_soft_delete.sql` | Retiro lógico de tickets por el estudiante, política de lectura y auditoría. |
 
 ### Comandos
 
@@ -247,8 +249,8 @@ npx supabase db query --remote --read-only --file supabase/verify.sql
 
 ## 10. Límites conocidos de esta etapa
 
-- La integración del frontend (reemplazar `AuthContext`, `TicketsContext` y `data/mock.ts`) es la
-  siguiente etapa; por ahora la app sigue funcionando con datos locales.
+- El frontend ya consume Supabase mediante `AuthContext`, `TicketsContext` y `services/`; las
+  migraciones de este directorio deben estar aplicadas en el proyecto antes de usar esos flujos.
 - El mapa sigue siendo esquemático; la base guarda pasos de ruta, no coordenadas reales.
 - Passkeys/WebAuthn no está activado en el proyecto; el acceso biométrico del frontend es simulado.
 - El registro requiere confirmar el correo (`mailer_autoconfirm = false` en Auth).

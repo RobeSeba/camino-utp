@@ -10,15 +10,18 @@ import {
   Paperclip,
   Send,
   Ticket as TicketIcon,
+  Trash2,
 } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Modal } from '@/components/ui/Modal';
 import { Textarea } from '@/components/ui/Textarea';
 import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Spinner } from '@/components/ui/Spinner';
 import { useTickets } from '@/context/TicketsContext';
+import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { fetchTicketCategories } from '@/services/content';
 import { ROUTES, TICKET_PRIORITY_META, TICKET_STATUS_META } from '@/lib/constants';
@@ -33,7 +36,9 @@ export function TicketDetailPage() {
   const { code = '' } = useParams<{ code: string }>();
   const location = useLocation();
   const navigate = useNavigate();
-  const { getTicketDetail, addMessage, refresh } = useTickets();
+  const { getTicketDetail, addMessage, refresh, deleteTicket } = useTickets();
+  const { user } = useAuth();
+  const canDeleteTicket = user?.role === 'student';
   const { notify } = useToast();
 
   const [ticket, setTicket] = useState<Ticket | null>(null);
@@ -43,6 +48,8 @@ export function TicketDetailPage() {
   const [reply, setReply] = useState('');
   const [replyError, setReplyError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const justCreated = Boolean((location.state as LocationState | null)?.justCreated);
 
@@ -149,6 +156,25 @@ export function TicketDetailPage() {
     ? ticket.attachmentName.split('/').pop() ?? ticket.attachmentName
     : null;
 
+  const handleDeleteTicket = async () => {
+    if (!ticket) return;
+    setDeleting(true);
+    const result = await deleteTicket(ticket.id);
+    setDeleting(false);
+
+    if (!result.ok) {
+      notify('No se pudo eliminar el ticket', result.error ?? 'Inténtalo nuevamente.', 'error');
+      return;
+    }
+
+    notify(
+      'Ticket eliminado',
+      'Se retiró de tu lista. El SAE conservará el registro y su historial para fines de seguimiento y auditoría.',
+      'success',
+    );
+    navigate(ROUTES.tickets, { replace: true });
+  };
+
   const handleReply = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (reply.trim().length < 3) {
@@ -178,6 +204,17 @@ export function TicketDetailPage() {
         backTo={{ to: ROUTES.tickets, label: 'Volver a mis tickets' }}
         actions={
           <div className="flex flex-wrap items-center gap-2">
+            {canDeleteTicket && (
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={Trash2}
+                className="text-danger hover:bg-danger-soft"
+                onClick={() => setDeleteModalOpen(true)}
+              >
+                Eliminar
+              </Button>
+            )}
             <Badge tone={status.tone} withDot>
               {status.label}
             </Badge>
@@ -419,6 +456,27 @@ export function TicketDetailPage() {
           </Card>
         </aside>
       </div>
+
+      <Modal
+        open={deleteModalOpen}
+        onClose={() => { if (!deleting) setDeleteModalOpen(false); }}
+        title="Eliminar ticket"
+        description="El ticket dejará de aparecer en tu lista, pero el SAE conservará el registro y su historial para fines de seguimiento y auditoría."
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setDeleteModalOpen(false)} disabled={deleting}>
+              Cancelar
+            </Button>
+            <Button variant="danger" icon={Trash2} loading={deleting} onClick={() => void handleDeleteTicket()}>
+              Eliminar ticket
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-muted">
+          ¿Deseas retirar <strong className="text-ink">{ticket.code}</strong> — {ticket.subject} de tu lista?
+        </p>
+      </Modal>
     </div>
   );
 }
