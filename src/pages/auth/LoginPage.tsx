@@ -19,6 +19,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { useAuth } from '@/context/AuthContext';
 import { ROUTES } from '@/lib/constants';
 import { useToast } from '@/context/ToastContext';
+import panel1 from '@/assets/panel1.png';
 
 export function LoginPage() {
   const { login, loginAsDemo, isAuthenticated, isLoading, user } = useAuth();
@@ -71,7 +72,10 @@ export function LoginPage() {
   return (
     <div className="grid min-h-dvh lg:grid-cols-[1.05fr_1fr]">
       {/* Panel de marca */}
-      <section className="relative hidden overflow-hidden bg-brand p-10 text-white lg:flex lg:flex-col">
+      {/* quitar ek bd-brand */}
+      <section className="relative hidden overflow-hidden bg-cover bg-center bg-no-repeat p-10 text-white lg:flex lg:flex-col" style={{ backgroundImage: `url(${panel1})` }}>
+        {/* Capa oscura semitransparente para asegurar contraste */}
+        <div className="absolute inset-0 bg-black/60 mix-blend-multiply" aria-hidden="true" />
         <div
           className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full border border-white/20"
           aria-hidden="true"
@@ -92,7 +96,7 @@ export function LoginPage() {
             <GraduationCap className="h-4 w-4" aria-hidden="true" />
             Comunidad UTP
           </p>
-          <h1 className="text-4xl font-extrabold leading-tight tracking-tight">
+          <h1 className="text-4xl font-extrabold leading-tight tracking-tight text-brand">
             Tu campus, a un paso.
           </h1>
           <p className="mt-4 text-base text-white/80">
