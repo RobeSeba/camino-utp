@@ -1,5 +1,14 @@
+import { lazy, Suspense, useState } from 'react';
+import { Box } from 'lucide-react';
 import type { Classroom } from '@/types';
+import { DEFAULT_SITE_CODE, getCampusSite, SITE_LAYOUTS } from '@/lib/campus3d';
+import { Spinner } from './ui/Spinner';
 import { cn } from '@/lib/utils';
+
+// Three.js se descarga solo cuando se abre el visor.
+const InteractiveMapModal = lazy(() =>
+  import('./InteractiveMapModal').then((module) => ({ default: module.InteractiveMapModal })),
+);
 
 interface CampusMapProps {
   classroom?: Classroom | null;
@@ -7,25 +16,29 @@ interface CampusMapProps {
   compact?: boolean;
 }
 
-const BUILDING_SHAPES = [
-  { code: 'A', x: 12, y: 18, width: 26, height: 30 },
-  { code: 'B', x: 52, y: 22, width: 28, height: 26 },
-  { code: 'C', x: 14, y: 60, width: 30, height: 26 },
-  { code: 'D', x: 58, y: 62, width: 28, height: 24 },
-];
-
 /**
- * Mapa esquematico del campus. No usa coordenadas reales: sirve como
- * referencia visual hasta contar con los planos oficiales (ver Etapa 1).
+ * Mapa esquematico de la sede del aula. No usa coordenadas reales: sirve como
+ * referencia visual hasta contar con los planos oficiales.
  */
 export function CampusMap({ classroom, className, compact = false }: CampusMapProps) {
-  const x = classroom?.mapX ?? 50;
-  const y = classroom?.mapY ?? 50;
+  const siteCode = classroom?.siteCode || DEFAULT_SITE_CODE;
+  const site = getCampusSite(siteCode);
+  const layout = SITE_LAYOUTS[siteCode] ?? SITE_LAYOUTS.CENTRAL;
+  const shapes = layout.buildings.map((building) => ({
+    code: building.code,
+    x: Math.max(5, building.x - 13),
+    y: Math.max(5, building.y - 10),
+    width: 26,
+    height: 20,
+  }));
+  const x = classroom?.mapX ?? layout.patio.x;
+  const y = classroom?.mapY ?? layout.patio.y;
+  const [show3D, setShow3D] = useState(false);
 
   return (
     <div
       className={cn(
-        'relative overflow-hidden rounded-2xl border border-line bg-canvas',
+        'group relative overflow-hidden rounded-2xl border border-line bg-canvas',
         className,
       )}
     >
@@ -34,8 +47,8 @@ export function CampusMap({ classroom, className, compact = false }: CampusMapPr
         role="img"
         aria-label={
           classroom
-            ? `Mapa esquemático del campus con la ubicación del aula ${classroom.code}`
-            : 'Mapa esquemático del campus'
+            ? `Mapa esquemático de ${site.name} con la ubicación del aula ${classroom.code}`
+            : `Mapa esquemático de ${site.name}`
         }
         className="h-full w-full"
       >
@@ -48,13 +61,22 @@ export function CampusMap({ classroom, className, compact = false }: CampusMapPr
         <rect width="100" height="100" fill="url(#grid)" />
 
         {/* Zonas verdes y patio */}
-        <circle cx="44" cy="50" r="9" fill="var(--c-success-soft)" />
-        <text x="44" y="50" textAnchor="middle" dominantBaseline="middle" fontSize="3" fill="var(--c-success)">
+        <circle cx={layout.patio.x} cy={layout.patio.y} r="9" fill="var(--c-success-soft)" />
+        <text
+          x={layout.patio.x}
+          y={layout.patio.y}
+          textAnchor="middle"
+          dominantBaseline="middle"
+          fontSize="3"
+          fill="var(--c-success)"
+        >
           Patio
         </text>
 
-        {BUILDING_SHAPES.map((building) => {
-          const isActive = classroom?.buildingName.endsWith(` ${building.code}`);
+        {shapes.map((building) => {
+          const isActive =
+            classroom?.buildingCode === building.code ||
+            classroom?.buildingName.trim().endsWith(` ${building.code}`);
           return (
             <g key={building.code}>
               <rect
@@ -83,8 +105,23 @@ export function CampusMap({ classroom, className, compact = false }: CampusMapPr
 
         {/* Entrada */}
         <g>
-          <rect x="40" y="93" width="20" height="5" rx="2.5" fill="var(--c-info-soft)" stroke="var(--c-info)" strokeWidth="0.6" />
-          <text x="50" y="96.6" textAnchor="middle" fontSize="2.8" fill="var(--c-info)">
+          <rect
+            x={layout.entrance.x - 10}
+            y={layout.entrance.y - 2}
+            width="20"
+            height="5"
+            rx="2.5"
+            fill="var(--c-info-soft)"
+            stroke="var(--c-info)"
+            strokeWidth="0.6"
+          />
+          <text
+            x={layout.entrance.x}
+            y={layout.entrance.y + 1.6}
+            textAnchor="middle"
+            fontSize="2.8"
+            fill="var(--c-info)"
+          >
             Entrada
           </text>
         </g>
@@ -93,7 +130,7 @@ export function CampusMap({ classroom, className, compact = false }: CampusMapPr
         {classroom && (
           <>
             <polyline
-              points={`50,93 50,84 ${Math.min(92, Math.max(8, x))},84 ${Math.min(92, Math.max(8, x))},${y}`}
+              points={`${layout.entrance.x},${layout.entrance.y} ${layout.entrance.x},84 ${Math.min(92, Math.max(8, x))},84 ${Math.min(92, Math.max(8, x))},${y}`}
               fill="none"
               stroke="var(--c-brand)"
               strokeWidth="1"
@@ -120,9 +157,46 @@ export function CampusMap({ classroom, className, compact = false }: CampusMapPr
 
       {classroom && (
         <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between gap-2 rounded-lg bg-surface px-2.5 py-1.5 text-[11px] font-medium text-muted shadow-sm backdrop-blur">
-          <span className="truncate">{classroom.buildingName}</span>
+          <span className="truncate">{site.shortName} · {classroom.buildingName}</span>
           <span className="shrink-0 text-ink">Piso {classroom.floor}</span>
         </div>
+      )}
+
+      {/* Toda la vista previa es un boton: clic en PC / touch en movil abre el visor 3D. */}
+      <span className="pointer-events-none absolute right-2 top-2 z-10 inline-flex items-center gap-1 rounded-lg bg-elevated/90 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-brand shadow-sm backdrop-blur">
+        <Box className="h-3 w-3" aria-hidden="true" />
+        3D
+      </span>
+      <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-brand/0 opacity-0 transition group-hover:bg-brand/5 group-hover:opacity-100">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-elevated/95 px-3 py-1.5 text-xs font-semibold text-brand shadow-sm">
+          <Box className="h-3.5 w-3.5" aria-hidden="true" />
+          Ver en 3D
+        </span>
+      </div>
+      <button
+        type="button"
+        onClick={() => setShow3D(true)}
+        aria-label="Abrir mapa 3D interactivo"
+        aria-haspopup="dialog"
+        title="Abrir mapa 3D interactivo"
+        className="absolute inset-0 z-20 h-full w-full rounded-2xl focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand"
+      />
+
+      {show3D && (
+        <Suspense
+          fallback={
+            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/60 text-sm text-white">
+              <Spinner className="h-5 w-5" />
+              <span className="ml-3">Cargando mapa 3D…</span>
+            </div>
+          }
+        >
+          <InteractiveMapModal
+            open={show3D}
+            onClose={() => setShow3D(false)}
+            classroom={classroom}
+          />
+        </Suspense>
       )}
     </div>
   );

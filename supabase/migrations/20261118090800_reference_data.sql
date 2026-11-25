@@ -8,7 +8,7 @@
 -- ------------------------- Sede -------------------------
 
 insert into public.campuses (code, name, city)
-values ('LIMA-SUR', 'Sede Lima Sur', 'Lima')
+values ('LIMA-CENTRO', 'Sede Lima Centro', 'Lima')
 on conflict (code) do update
   set name = excluded.name,
       city = excluded.city;
@@ -24,7 +24,7 @@ from (
     ('C', 'Pabellón C', 4),
     ('D', 'Pabellón D', 5)
 ) as v(code, name, floors)
-cross join (select id from public.campuses where code = 'LIMA-SUR') as c
+cross join (select id from public.campuses where code = 'LIMA-CENTRO') as c
 on conflict (campus_id, code) do update
   set name = excluded.name,
       floors = excluded.floors;
@@ -63,7 +63,7 @@ from (
       array['Videoconferencia', 'Pantalla 65"', 'Micrófonos'])
 ) as v(building_code, code, name, floor, reference, capacity, map_x, map_y, equipment)
 join public.buildings b on b.code = v.building_code
-join public.campuses c on c.id = b.campus_id and c.code = 'LIMA-SUR'
+join public.campuses c on c.id = b.campus_id and c.code = 'LIMA-CENTRO'
 on conflict (code) do update
   set building_id = excluded.building_id,
       name = excluded.name,

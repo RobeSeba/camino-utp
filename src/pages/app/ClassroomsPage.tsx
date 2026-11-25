@@ -8,24 +8,27 @@ import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
-import { fetchBuildings, fetchClassrooms } from '@/services/campus';
+import { fetchBuildings, fetchClassrooms, fetchSites } from '@/services/campus';
 import { ROUTES } from '@/lib/constants';
 import { cn, normalize } from '@/lib/utils';
-import type { Building, Classroom } from '@/types';
+import type { Building, Classroom, Site } from '@/types';
 
 export function ClassroomsPage() {
+  const [sites, setSites] = useState<Site[]>([]);
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+  const [site, setSite] = useState('all');
   const [building, setBuilding] = useState('all');
 
   const load = async () => {
     setLoading(true);
     setError(null);
     try {
-      const [b, c] = await Promise.all([fetchBuildings(), fetchClassrooms()]);
+      const [s, b, c] = await Promise.all([fetchSites(), fetchBuildings(), fetchClassrooms()]);
+      setSites(s);
       setBuildings(b);
       setClassrooms(c);
     } catch {
@@ -42,17 +45,19 @@ export function ClassroomsPage() {
   const results = useMemo(() => {
     const term = normalize(query.trim());
     return classrooms.filter((classroom) => {
+      const matchesSite = site === 'all' || classroom.siteCode === site;
       const matchesBuilding = building === 'all' || classroom.buildingId === building;
-      if (!matchesBuilding) return false;
+      if (!matchesSite || !matchesBuilding) return false;
       if (!term) return true;
       const haystack = normalize(
-        `${classroom.code} ${classroom.name} ${classroom.buildingName} ${classroom.reference}`,
+        `${classroom.code} ${classroom.name} ${classroom.siteName} ${classroom.buildingName} ${classroom.reference}`,
       );
       return haystack.includes(term);
     });
-  }, [classrooms, query, building]);
+  }, [classrooms, query, site, building]);
 
-  const hasFilters = query.trim().length > 0 || building !== 'all';
+  const hasFilters = query.trim().length > 0 || site !== 'all' || building !== 'all';
+  const visibleBuildings = site === 'all' ? buildings : buildings.filter((item) => item.siteCode === site);
 
   return (
     <div>
@@ -63,6 +68,38 @@ export function ClassroomsPage() {
       />
 
       <Card className="mb-6">
+        <div className="mb-4 border-b border-line pb-4">
+          <p className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-ink">
+            <MapPin className="h-4 w-4 text-muted" aria-hidden="true" />
+            Sede (dentro de Lima Centro)
+          </p>
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Filtrar por sede">
+            <FilterChip
+              active={site === 'all'}
+              onClick={() => {
+                setSite('all');
+                setBuilding('all');
+              }}
+              disabled={loading}
+            >
+              Todas
+            </FilterChip>
+            {sites.map((item) => (
+              <FilterChip
+                key={item.id}
+                active={site === item.code}
+                onClick={() => {
+                  setSite(item.code);
+                  setBuilding('all');
+                }}
+                disabled={loading}
+              >
+                {item.shortName}
+              </FilterChip>
+            ))}
+          </div>
+        </div>
+
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
           <Input
             label="¿Qué aula buscas?"
@@ -71,7 +108,7 @@ export function ClassroomsPage() {
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             containerClassName="flex-1"
-            hint="Puedes buscar por código, nombre o referencia del pabellón."
+            hint="Puedes buscar por código, sede, pabellón o referencia."
             disabled={loading}
           />
           <div className="sm:w-56">
@@ -83,7 +120,7 @@ export function ClassroomsPage() {
               <FilterChip active={building === 'all'} onClick={() => setBuilding('all')} disabled={loading}>
                 Todos
               </FilterChip>
-              {buildings.map((item) => (
+              {visibleBuildings.map((item) => (
                 <FilterChip
                   key={item.id}
                   active={building === item.id}
@@ -126,6 +163,7 @@ export function ClassroomsPage() {
                 size="sm"
                 onClick={() => {
                   setQuery('');
+                  setSite('all');
                   setBuilding('all');
                 }}
               >
@@ -145,6 +183,7 @@ export function ClassroomsPage() {
                     variant="secondary"
                     onClick={() => {
                       setQuery('');
+                      setSite('all');
                       setBuilding('all');
                     }}
                   >
@@ -173,6 +212,11 @@ export function ClassroomsPage() {
                       </div>
 
                       <dl className="mt-4 space-y-1.5 text-sm">
+                        <div className="flex items-center gap-2 text-muted">
+                          <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />
+                          <dt className="sr-only">Sede</dt>
+                          <dd>{classroom.siteName}</dd>
+                        </div>
                         <div className="flex items-center gap-2 text-muted">
                           <Building2 className="h-4 w-4 shrink-0" aria-hidden="true" />
                           <dt className="sr-only">Pabellón</dt>

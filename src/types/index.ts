@@ -12,11 +12,24 @@ export interface Profile {
   role: Role;
 }
 
+export interface Site {
+  id: string;
+  code: string;
+  name: string;
+  shortName: string;
+  address: string;
+  lat: number;
+  lng: number;
+  campus: string;
+}
+
 export interface Building {
   id: string;
   code: string;
   name: string;
   floors: number;
+  siteId: string;
+  siteCode: string;
 }
 
 export interface Classroom {
@@ -24,12 +37,19 @@ export interface Classroom {
   code: string;
   name: string;
   buildingId: string;
+  buildingCode: string;
   buildingName: string;
   floor: number;
   campus: string;
+  siteId: string;
+  siteCode: string;
+  siteName: string;
+  siteAddress: string;
+  siteLat: number;
+  siteLng: number;
   reference: string;
   directions: string[];
-  /** Posicion relativa (0-100) usada por el mapa esquematico. */
+  /** Posicion relativa (0-100) usada por el mapa esquematico de la sede. */
   mapX: number;
   mapY: number;
   capacity: number;

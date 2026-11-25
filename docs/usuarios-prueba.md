@@ -18,7 +18,7 @@ Se incluye la migración `supabase/migrations/20261118130000_test_users.sql`, qu
 
 1. Asegura la extensión `pgcrypto` (para `crypt`/`gen_salt`).
 2. Crea (o actualiza de forma idempotente) los usuarios en `auth.users` y `auth.identities` con correo confirmado.
-3. Actualiza `public.profiles` con nombre, rol, sede Lima Sur y datos de prueba (el perfil base se crea por el trigger `on_auth_user_created`).
+3. Actualiza `public.profiles` con nombre, rol, sede Lima Centro y datos de prueba (el perfil base se crea por el trigger `on_auth_user_created`).
 
 ### Opción A · Supabase CLI (recomendado)
 

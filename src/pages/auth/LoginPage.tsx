@@ -18,12 +18,10 @@ import { Input } from '@/components/ui/Input';
 import { Spinner } from '@/components/ui/Spinner';
 import { useAuth } from '@/context/AuthContext';
 import { ROUTES } from '@/lib/constants';
-import { useToast } from '@/context/ToastContext';
 import panel1 from '@/assets/panel1.png';
 
 export function LoginPage() {
-  const { login, loginAsDemo, isAuthenticated, isLoading, user } = useAuth();
-  const { notify } = useToast();
+  const { login, isAuthenticated, isLoading, user } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -55,17 +53,6 @@ export function LoginPage() {
     if (!result.ok) {
       setError(result.error ?? 'No se pudo iniciar sesión.');
       return;
-    }
-  };
-
-  const handleDemo = async (role: 'student' | 'staff') => {
-    setError(null);
-    setLoading(true);
-    const result = await loginAsDemo(role);
-    setLoading(false);
-    if (!result.ok) {
-      setError(result.error ?? 'No se pudo iniciar con la cuenta de demostración.');
-      notify('Acceso de demostración no disponible', 'Verifica que la cuenta exista en el entorno.', 'error');
     }
   };
 
@@ -124,7 +111,7 @@ export function LoginPage() {
         </div>
 
         <p className="relative z-10 text-xs text-white/60">
-          Universidad Tecnológica del Perú · Sede Lima Sur
+          Universidad Tecnológica del Perú · Sede Lima Centro
         </p>
       </section>
 
