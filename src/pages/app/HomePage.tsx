@@ -91,7 +91,7 @@ export function HomePage() {
       <PageHeader
         eyebrow={formatLongDate(new Date())}
         title={`Hola, ${firstName}`}
-        description={`${user?.career || 'Estudiante UTP'} · ${user?.campus || 'Sede Lima Sur'}`}
+        description={`${user?.career || 'Estudiante UTP'} · ${user?.campus || 'Sede Lima Centro'}`}
         actions={
           <Link to={ROUTES.accessibility}>
             <Button variant="secondary" size="sm">
@@ -124,7 +124,9 @@ export function HomePage() {
                   <MapPin className="h-4 w-4 text-brand" aria-hidden="true" />
                   <dt className="sr-only">Aula</dt>
                   <dd className="font-semibold text-ink">
-                    {classroom ? `${classroom.code} · ${classroom.buildingName}` : NEXT_CLASS.classroomCode}
+                    {classroom
+                      ? `${classroom.code} · ${classroom.siteName} · ${classroom.buildingName}`
+                      : NEXT_CLASS.classroomCode}
                   </dd>
                 </div>
               </dl>

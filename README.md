@@ -106,6 +106,23 @@ Consulta [`docs/usuarios-prueba.md`](docs/usuarios-prueba.md) para aplicarla y v
 | `/app/accesibilidad` | Tamaño de texto, tema, contraste y movimiento |
 | `/app/staff` | Bandeja SAE (restringida por rol) |
 
+### Mapa interactivo por sede
+
+El mapa esquemático de "Cómo llegar" abre un visor con dos vistas (ventana centrada en PC y casi
+pantalla completa en móvil):
+
+- **Vista 3D** (Three.js): gira y acerca **una sede a la vez**. El selector "Sede" cambia entre
+  Hernán Velarde, Torre Arequipa, Torre Petit Thouars y Torre Pacífico; cada sede tiene sus propios
+  pabellones y alturas.
+- **Mapa real** (Leaflet + OpenStreetMap, sin clave): muestra las cuatro sedes con coordenadas
+  reales. Las dos torres de Av. Arequipa/Petit Thouars aparecen separadas. La ruta peatonal se
+  calcula con OSRM; si falla, se usa la estimación local.
+
+La jerarquía es **Lima Centro → sede → pabellón → piso → aula**. Al tocar un pabellón se abre su
+plano esquemático por piso; el piso se deduce del primer número del código (`A-201` → 2,
+`AR-A-305` → 3). Las rutas paso a paso indican primero la sede y luego el pabellón/piso.
+Three.js y Leaflet se cargan de forma diferida.
+
 ---
 
 ## Estructura del proyecto
@@ -117,7 +134,11 @@ camino-utp/
 │  ├─ components/
 │  │  ├─ layout/          # AppLayout, Logo
 │  │  ├─ ui/              # Button, Input, Select, Textarea, Card, Badge, Modal, Switch...
-│  │  ├─ CampusMap.tsx
+│  │  ├─ CampusMap.tsx          # Mapa 2D y acceso al visor 3D
+│  │  ├─ CampusMap3D.tsx        # Escena Three.js (edificios, ruta y selección)
+│  │  ├─ InteractiveMapModal.tsx# Modal responsive: 3D / OSM, origen/destino y tiempo
+│  │  ├─ RealMapView.tsx        # Mapa real con Leaflet + OpenStreetMap
+│  │  ├─ FloorPlanPanel.tsx     # Plano esquematico por piso del pabellon
 │  │  └─ ErrorBoundary.tsx
 │  ├─ context/            # Auth, Accessibility, Tickets, Toast
 │  ├─ services/           # Consultas y operaciones de Supabase

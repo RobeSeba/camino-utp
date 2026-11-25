@@ -162,6 +162,30 @@
   }
 }
 
+/* Marcadores del mapa real (Leaflet) */
+.campus-marker {
+  background: transparent;
+  border: 0;
+}
+
+.campus-marker__dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 9px;
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  background: var(--marker-color, #cf0a1e);
+  box-shadow: 0 2px 10px rgba(16, 24, 40, 0.35);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
 /* Respeta la preferencia de menos movimiento */
 [data-motion='reduced'] *,
 [data-motion='reduced'] *::before,

@@ -107,7 +107,7 @@ export function ClassroomDetailPage() {
   return (
     <div>
       <PageHeader
-        eyebrow={`${classroom.buildingName} · Piso ${classroom.floor}`}
+        eyebrow={`${classroom.siteName} · ${classroom.buildingName} · Piso ${classroom.floor}`}
         title={`Aula ${classroom.code}`}
         description={classroom.reference}
         backTo={{ to: ROUTES.classrooms, label: 'Volver al buscador' }}
@@ -132,6 +132,7 @@ export function ClassroomDetailPage() {
             <h2 className="mt-3 text-xl font-bold">{classroom.name}</h2>
 
             <dl className="mt-4 grid gap-3 sm:grid-cols-2">
+              <InfoRow icon={MapPin} label="Sede" value={classroom.siteName} />
               <InfoRow icon={Building2} label="Pabellón" value={classroom.buildingName} />
               <InfoRow icon={Layers} label="Piso" value={`Piso ${classroom.floor}`} />
               <InfoRow icon={Users} label="Capacidad" value={`${classroom.capacity} estudiantes`} />
@@ -159,11 +160,11 @@ export function ClassroomDetailPage() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-base font-semibold">Ruta paso a paso</h2>
-                {classroom.directions.length > 0 && (
-                  <p className="mt-0.5 text-sm text-muted">
-                    Paso {currentStep + 1} de {classroom.directions.length}
-                  </p>
-                )}
+                <p className="mt-0.5 text-sm text-muted">
+                  En {classroom.siteName} · {classroom.buildingName} · Piso {classroom.floor}
+                  {classroom.directions.length > 0 &&
+                    ` · Paso ${currentStep + 1} de ${classroom.directions.length}`}
+                </p>
               </div>
               <Badge tone="success">Ruta accesible</Badge>
             </div>
@@ -247,8 +248,9 @@ export function ClassroomDetailPage() {
             <div className="flex items-start gap-2.5 border-t border-line p-4 text-xs text-muted">
               <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
               <p>
-                Mapa esquemático de referencia. La señalización física del campus prevalece hasta
-                contar con los planos oficiales.
+                Toca el mapa para abrirlo en 3D, girar el campus y calcular el tiempo aproximado
+                entre dos puntos. La señalización física prevalece hasta contar con los planos
+                oficiales.
               </p>
             </div>
           </Card>

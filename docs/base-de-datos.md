@@ -202,13 +202,24 @@ de la ruta corresponde a un ticket propio (estudiante) o a cualquier ticket (SAE
 
 La migración `20261118090800_reference_data.sql` carga, de forma idempotente:
 
-- 1 sede (`Sede Lima Sur`), 4 pabellones y 12 aulas con sus 36 pasos de ruta.
+- 1 campus (`Sede Lima Centro`), 4 pabellones y 12 aulas con sus 36 pasos de ruta.
+- Mediante `20261124100000_sites_hierarchy.sql`, ese campus se divide en 4 sedes: Hernán Velarde,
+  Torre Arequipa, Torre Petit Thouars y Torre Pacífico; el catálogo queda con 10 pabellones y 21
+  aulas (las 12 originales más 9 nuevas) con sus pasos de ruta. Los códigos de las nuevas sedes llevan prefijo (`AR-A-101`, `PT-B-203`,
+  `PC-B-401`) para no colisionar con `A-201` de la Sede Central.
 - 5 categorías de ticket con su SLA.
 - 8 artículos de ayuda.
 - 4 canales de atención.
 - 2 avisos publicados.
 
 No se crean usuarios ni tickets de prueba.
+
+> Si ya aplicaste la migración cuando la sede se llamaba `LIMA-SUR`, actualiza la fila existente:
+> `update public.campuses set code = 'LIMA-CENTRO', name = 'Sede Lima Centro' where code = 'LIMA-SUR';`
+> (revisa también los perfiles que apunten al campus anterior).
+
+> La migración `20261124100000_sites_hierarchy.sql` asigna automáticamente los pabellones `A-D` y
+> sus aulas a la sede `CENTRAL`, así que se puede aplicar sobre una base ya poblada.
 
 ---
 
@@ -225,7 +236,8 @@ No se crean usuarios ni tickets de prueba.
 | 7 | `20261118090600_storage_attachments.sql` | Bucket privado y políticas de Storage. |
 | 8 | `20261118090700_privileges.sql` | `GRANT`/`REVOKE` explícitos por rol. |
 | 9 | `20261118090800_reference_data.sql` | Catálogo y contenido inicial. |
-| 10 | `20261124170000_ticket_student_soft_delete.sql` | Retiro lógico de tickets por el estudiante, política de lectura y auditoría. |
+| 10 | `20261124100000_sites_hierarchy.sql` | Sedes dentro de Lima Centro, pabellones/aulas por sede y rutas con contexto de sede. |
+| 11 | `20261124170000_ticket_student_soft_delete.sql` | Retiro lógico de tickets por el estudiante, política de lectura y auditoría. |
 
 ### Comandos
 

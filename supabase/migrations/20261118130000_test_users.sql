@@ -65,7 +65,7 @@ declare
 begin
   select id into v_campus_id
   from public.campuses
-  where code = 'LIMA-SUR'
+  where code = 'LIMA-CENTRO'
   limit 1;
 
   -- Hash bcrypt (pgcrypto). Supabase suele exponer crypt en extensions.
