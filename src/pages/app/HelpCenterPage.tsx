@@ -128,7 +128,10 @@ export function HelpCenterPage() {
                 />
               </div>
             </div>
-            <Button type="submit" className="border border-white/30 bg-white text-brand hover:bg-white/90">
+            <Button
+              type="submit"
+              className="border border-white/30 !bg-white !text-[#a50817] hover:!bg-white/90"
+            >
               Buscar
             </Button>
           </form>

@@ -174,7 +174,7 @@ export function HomePage() {
                 <Button
                   fullWidth
                   icon={MessageSquarePlus}
-                  className="border border-white/25 bg-white text-brand hover:bg-white/90"
+                  className="border border-white/25 !bg-white !text-[#a50817] hover:!bg-white/90"
                 >
                   Reportar incidencia
                 </Button>
@@ -183,7 +183,7 @@ export function HomePage() {
                 <Button
                   fullWidth
                   variant="ghost"
-                  className="text-white hover:bg-white/10"
+                  className="!text-white hover:!bg-white/10"
                   icon={ArrowRight}
                 >
                   Ir al centro de ayuda
