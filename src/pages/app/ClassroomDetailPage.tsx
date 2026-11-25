@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { Modal } from '@/components/ui/Modal';
 import {
   Accessibility,
   ArrowLeft,
@@ -30,6 +31,7 @@ export function ClassroomDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
+  const [arrivalModalOpen, setArrivalModalOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -42,6 +44,7 @@ export function ClassroomDetailPage() {
       setLoading(true);
       setError(null);
       setCurrentStep(0);
+      setArrivalModalOpen(false);
       try {
         const data = await fetchClassroomByIdOrCode(classroomId);
         if (!active) return;
@@ -103,6 +106,14 @@ export function ClassroomDetailPage() {
   }
 
   const isLastStep = classroom.directions.length > 0 && currentStep === classroom.directions.length - 1;
+  const handleNextStep = () => {
+    const nextStep = Math.min(classroom.directions.length - 1, currentStep + 1);
+    setCurrentStep(nextStep);
+
+    if (nextStep === classroom.directions.length - 1) {
+      setArrivalModalOpen(true);
+    }
+  };
 
   return (
     <div>
@@ -173,49 +184,30 @@ export function ClassroomDetailPage() {
               <p className="mt-4 text-sm text-muted">No hay indicaciones registradas para esta aula.</p>
             ) : (
               <>
-                <ol className="mt-5 space-y-0">
-                  {classroom.directions.map((step, index) => {
-                    const isDone = index < currentStep;
-                    const isActive = index === currentStep;
-                    return (
-                      <li key={`${index}-${step}`} className="flex gap-3">
-                        <div className="flex flex-col items-center">
-                          <span
-                            className={cn(
-                              'flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold transition',
-                              isDone && 'border-success bg-success text-white',
-                              isActive && 'border-brand bg-brand-soft text-brand',
-                              !isDone && !isActive && 'border-line bg-surface text-muted',
-                            )}
-                            aria-hidden="true"
-                          >
-                            {isDone ? <Check className="h-4 w-4" /> : index + 1}
-                          </span>
-                          {index < classroom.directions.length - 1 && (
-                            <span
-                              className={cn('my-1 w-0.5 flex-1', isDone ? 'bg-success' : 'bg-line')}
-                              aria-hidden="true"
-                            />
-                          )}
-                        </div>
-                        <div className={cn('pb-5', index === classroom.directions.length - 1 && 'pb-0')}>
-                          <p
-                            className={cn(
-                              'text-sm leading-relaxed',
-                              isActive ? 'font-semibold text-ink' : 'text-muted',
-                            )}
-                          >
-                            {step}
-                          </p>
-                          {isActive && (
-                            <p className="mt-1 text-xs font-medium text-brand">Estás en este paso</p>
-                          )}
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ol>
+                <div
+                  role="status"
+                  aria-live="polite"
+                  aria-atomic="true"
+                  className="mt-5 rounded-2xl border-2 border-brand bg-brand-soft p-5 shadow-float"
+                >
+                  <div className="flex items-start gap-4">
+                    <span
+                      aria-hidden="true"
+                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-ink text-lg font-bold text-brand-soft shadow-sm"
+                    >
+                      {currentStep + 1}
+                    </span>
 
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wider text-brand-ink">
+                        Paso {currentStep + 1} de {classroom.directions.length}
+                      </p>
+                      <p className="mt-2 text-base font-semibold leading-relaxed text-ink">
+                        {classroom.directions[currentStep]}
+                      </p>
+                    </div>
+                  </div>
+                </div>
                 <div className="mt-4 flex gap-2 border-t border-line pt-4">
                   <Button
                     variant="secondary"
@@ -226,16 +218,12 @@ export function ClassroomDetailPage() {
                   >
                     Anterior
                   </Button>
-                  <Button
-                    size="sm"
-                    disabled={isLastStep}
-                    onClick={() =>
-                      setCurrentStep((step) => Math.min(classroom.directions.length - 1, step + 1))
-                    }
-                  >
-                    {isLastStep ? 'Llegaste' : 'Siguiente paso'}
-                    {!isLastStep && <ArrowRight className="h-4 w-4" aria-hidden="true" />}
-                  </Button>
+                  {!isLastStep && (
+                    <Button size="sm" onClick={handleNextStep}>
+                      Siguiente paso
+                      <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                    </Button>
+                  )}
                 </div>
               </>
             )}
@@ -273,6 +261,13 @@ export function ClassroomDetailPage() {
                   Solicitar apoyo
                   <ArrowRight className="h-4 w-4" aria-hidden="true" />
                 </Link>
+                <Modal
+                  open={arrivalModalOpen}
+                  onClose={() => setArrivalModalOpen(false)}
+                  title="¡Llegaste a tu aula!"
+                  description={`Has completado las indicaciones para llegar al aula ${classroom.code}.`}
+                  footer={<Button onClick={() => setArrivalModalOpen(false)}>Entendido</Button>}
+                />
               </div>
             </div>
           </Card>
