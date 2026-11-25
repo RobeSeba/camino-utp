@@ -23,3 +23,18 @@ export const supabase = createClient(supabaseUrl, supabasePublishableKey, {
     storageKey: 'camino-utp:auth',
   },
 });
+
+/**
+ * Cliente temporal, sin sesion persistente ni eventos compartidos con el
+ * cliente principal. Se usa para comprobar la contrasena actual sin
+ * disparar cambios de estado en la sesion activa de la aplicacion.
+ */
+export function createIsolatedClient() {
+  return createClient(supabaseUrl, supabasePublishableKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+  });
+}
