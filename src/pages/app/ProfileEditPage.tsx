@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { AlertCircle, Save } from 'lucide-react';
+import { AlertCircle, KeyRound, Save } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -37,8 +37,19 @@ interface FormState {
 
 type FormErrors = Partial<Record<keyof FormState, string>>;
 
+interface PasswordState {
+  current: string;
+  next: string;
+  confirm: string;
+}
+
+type PasswordErrors = Partial<Record<keyof PasswordState, string>>;
+
+const EMPTY_PASSWORD: PasswordState = { current: '', next: '', confirm: '' };
+const MIN_PASSWORD_LENGTH = 8;
+
 export function ProfileEditPage() {
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, changePassword } = useAuth();
   const { notify } = useToast();
   const navigate = useNavigate();
 
@@ -51,6 +62,59 @@ export function ProfileEditPage() {
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [saving, setSaving] = useState(false);
+
+  const [passwordForm, setPasswordForm] = useState<PasswordState>(EMPTY_PASSWORD);
+  const [passwordErrors, setPasswordErrors] = useState<PasswordErrors>({});
+  const [changingPassword, setChangingPassword] = useState(false);
+
+  const updatePassword = (field: keyof PasswordState, value: string) => {
+    setPasswordForm((current) => ({ ...current, [field]: value }));
+    setPasswordErrors((current) => ({ ...current, [field]: undefined }));
+  };
+
+  const validatePassword = (): PasswordErrors => {
+    const next: PasswordErrors = {};
+    if (!passwordForm.current) {
+      next.current = 'Ingresa tu contraseña actual.';
+    }
+    if (passwordForm.next.length < MIN_PASSWORD_LENGTH) {
+      next.next = `Usa al menos ${MIN_PASSWORD_LENGTH} caracteres.`;
+    } else if (!/[A-Za-z]/.test(passwordForm.next) || !/\d/.test(passwordForm.next)) {
+      next.next = 'Combina letras y números.';
+    } else if (passwordForm.next === passwordForm.current) {
+      next.next = 'La nueva contraseña debe ser distinta de la actual.';
+    }
+    if (!passwordForm.confirm) {
+      next.confirm = 'Repite la nueva contraseña.';
+    } else if (passwordForm.confirm !== passwordForm.next) {
+      next.confirm = 'Las contraseñas no coinciden.';
+    }
+    return next;
+  };
+
+  const handlePasswordSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const nextErrors = validatePassword();
+    if (Object.keys(nextErrors).length > 0) {
+      setPasswordErrors(nextErrors);
+      notify('Revisa el formulario', 'Corrige los datos de la contraseña antes de continuar.', 'error');
+      return;
+    }
+
+    setChangingPassword(true);
+    const result = await changePassword(passwordForm.current, passwordForm.next);
+    setChangingPassword(false);
+    if (!result.ok) {
+      if (result.error?.includes('contraseña actual')) {
+        setPasswordErrors({ current: result.error });
+      }
+      notify('No se pudo cambiar la contraseña', result.error ?? 'Inténtalo nuevamente.', 'error');
+      return;
+    }
+    setPasswordForm(EMPTY_PASSWORD);
+    setPasswordErrors({});
+    notify('Contraseña actualizada', 'Usa la nueva contraseña la próxima vez que inicies sesión.');
+  };
 
   const update = (field: keyof FormState, value: string) => {
     setForm((current) => ({ ...current, [field]: value }));
@@ -198,6 +262,59 @@ export function ProfileEditPage() {
             </Link>
             <Button type="submit" icon={Save} loading={saving}>
               Guardar cambios
+            </Button>
+          </div>
+        </Card>
+      </form>
+
+      <form onSubmit={handlePasswordSubmit} noValidate className="mt-6">
+        <Card padding="lg">
+          <div className="flex items-center gap-2.5">
+            <KeyRound className="h-5 w-5 text-brand" aria-hidden="true" />
+            <h2 className="text-lg font-bold text-ink">Cambiar contraseña</h2>
+          </div>
+          <p className="mt-1 text-sm text-muted">
+            Por seguridad, confirma tu contraseña actual antes de elegir una nueva.
+          </p>
+
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            <Input
+              label="Contraseña actual"
+              name="currentPassword"
+              type="password"
+              value={passwordForm.current}
+              onChange={(event) => updatePassword('current', event.target.value)}
+              error={passwordErrors.current}
+              autoComplete="current-password"
+              required
+              containerClassName="sm:col-span-2"
+            />
+            <Input
+              label="Nueva contraseña"
+              name="newPassword"
+              type="password"
+              value={passwordForm.next}
+              onChange={(event) => updatePassword('next', event.target.value)}
+              error={passwordErrors.next}
+              hint={`Mínimo ${MIN_PASSWORD_LENGTH} caracteres, con letras y números.`}
+              autoComplete="new-password"
+              required
+            />
+            <Input
+              label="Confirmar nueva contraseña"
+              name="confirmPassword"
+              type="password"
+              value={passwordForm.confirm}
+              onChange={(event) => updatePassword('confirm', event.target.value)}
+              error={passwordErrors.confirm}
+              autoComplete="new-password"
+              required
+            />
+          </div>
+
+          <div className="mt-6 flex justify-end border-t border-line pt-5">
+            <Button type="submit" icon={KeyRound} loading={changingPassword}>
+              Cambiar contraseña
             </Button>
           </div>
         </Card>
