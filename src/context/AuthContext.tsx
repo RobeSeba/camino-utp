@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase';
+import { createIsolatedClient, supabase } from '@/lib/supabase';
 import { fetchMyProfile, updateMyProfile } from '@/services/profiles';
 import type { Profile, Role } from '@/types';
 import { DEMO_ACCOUNTS } from '@/lib/constants';
@@ -27,6 +27,7 @@ interface AuthContextValue {
   updateProfile: (patch: { fullName: string; phone: string; career: string; cycle: string }) => Promise<UpdateProfileResult>;
   refreshProfile: () => Promise<void>;
   resetPassword: (email: string) => Promise<LoginResult>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<LoginResult>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -70,6 +71,21 @@ function authErrorMessage(error: unknown): string {
     return 'No pudimos conectarnos. Revisa tu conexión e inténtalo otra vez.';
   }
   return 'No se pudo completar la operación. Inténtalo nuevamente.';
+}
+
+function passwordErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  const lower = message.toLowerCase();
+  if (lower.includes('different from the old password') || lower.includes('same password')) {
+    return 'La nueva contraseña debe ser distinta de la actual.';
+  }
+  if (lower.includes('at least') || lower.includes('weak') || lower.includes('should contain')) {
+    return 'La nueva contraseña es demasiado débil. Usa al menos 8 caracteres con letras y números.';
+  }
+  if (lower.includes('reauthentication') || lower.includes('session')) {
+    return 'Tu sesión necesita validarse de nuevo. Cierra sesión, vuelve a ingresar e inténtalo otra vez.';
+  }
+  return authErrorMessage(error);
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -142,8 +158,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void init();
 
     const { data: subscription } = supabase.auth.onAuthStateChange(
-      (_event: AuthChangeEvent, session: Session | null) => {
+      (event: AuthChangeEvent, session: Session | null) => {
         if (!active) return;
+        // Un cambio de datos de la cuenta (p. ej. la contrasena) no cambia quien
+        // esta conectado: se refresca el perfil sin mostrar el spinner global,
+        // que desmontaria la pagina y borraria el formulario en pantalla.
+        if (event === 'USER_UPDATED') {
+          void loadProfile(session);
+          return;
+        }
         void (async () => {
           setIsLoading(true);
           try {
@@ -231,6 +254,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { ok: true };
   }, []);
 
+  const changePassword = useCallback(
+    async (currentPassword: string, newPassword: string): Promise<LoginResult> => {
+      const email = user?.email;
+      if (!email) return { ok: false, error: 'No hay una sesión activa.' };
+
+      // 1) Comprobar la contrasena actual con un cliente aislado (no toca la sesion activa).
+      const verifier = createIsolatedClient();
+      const { error: verifyError } = await verifier.auth.signInWithPassword({
+        email,
+        password: currentPassword,
+      });
+      if (verifyError) {
+        const lower = verifyError.message.toLowerCase();
+        if (lower.includes('invalid login credentials')) {
+          return { ok: false, error: 'La contraseña actual no es correcta.' };
+        }
+        return { ok: false, error: authErrorMessage(verifyError) };
+      }
+
+      // 2) Cambiar la contrasena en la sesion activa.
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) return { ok: false, error: passwordErrorMessage(error) };
+      return { ok: true };
+    },
+    [user?.email],
+  );
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
@@ -242,8 +292,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       updateProfile,
       refreshProfile,
       resetPassword,
+      changePassword,
     }),
-    [user, isLoading, login, loginAsDemo, logout, updateProfile, refreshProfile, resetPassword],
+    [user, isLoading, login, loginAsDemo, logout, updateProfile, refreshProfile, resetPassword, changePassword],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
