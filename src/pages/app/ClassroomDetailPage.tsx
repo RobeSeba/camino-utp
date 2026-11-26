@@ -6,7 +6,6 @@ import {
   ArrowLeft,
   ArrowRight,
   Building2,
-  Check,
   Info,
   Layers,
   MapPin,
@@ -22,7 +21,6 @@ import { Spinner } from '@/components/ui/Spinner';
 import { CampusMap } from '@/components/CampusMap';
 import { fetchClassroomByIdOrCode } from '@/services/campus';
 import { ROUTES } from '@/lib/constants';
-import { cn } from '@/lib/utils';
 import type { Classroom } from '@/types';
 
 export function ClassroomDetailPage() {
